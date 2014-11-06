@@ -18,25 +18,25 @@ import scala.concurrent.{Future}
 
 class NotificationHandler {
   def register(device: Device): Boolean = {
-    val req = search in com.mogobiz.es.Settings.ElasticSearch.Index -> "Device" filter {
+    val req = search in Settings.Notification.EsIndex -> "Device" filter {
       and(
         termFilter("deviceUuid", device.deviceUuid),
         termFilter("storeCode", device.storeCode)
       )
     }
     // We delete the existing device if any && upsert
-    EsClient.update(device, true, false)
+    EsClient.update(Settings.Notification.EsIndex, device, true, false)
   }
 
   def unregister(storeCode: String, regId: String): Boolean = {
-    val req = search in com.mogobiz.es.Settings.ElasticSearch.Index types "Device" filter {
+    val req = search in Settings.Notification.EsIndex types "Device" filter {
       and(
         termFilter("regId", regId),
         termFilter("storeCode", storeCode)
       )
     }
     val devices = EsClient.search[Device](req)
-    devices.foreach(d => EsClient.delete[Device](d.uuid, false))
+    devices.foreach(d => EsClient.delete[Device](Settings.Notification.EsIndex, d.uuid, false))
     true
   }
 
@@ -57,7 +57,7 @@ class NotificationHandler {
 
     val pipeline: SendReceive = (
       addHeader("Content-Type", "application/json")
-        ~> addCredentials(BasicHttpCredentials(s"key=${Settings.Gcm.ApiKey}"))
+        ~> addCredentials(BasicHttpCredentials(s"key=${Settings.Notification.Gcm.ApiKey}"))
         ~> sendReceive
       )
 
@@ -73,11 +73,11 @@ class NotificationHandler {
 
   lazy val appleNotificationServer: AppleNotificationServer = {
     new AppleNotificationServerBasicImpl(
-      Settings.Apns.Keystore,
-      Settings.Apns.Password,
-      Settings.Apns.KeystoreType,
-      Settings.Apns.Host,
-      Integer.parseInt(Settings.Apns.Port))
+      Settings.Notification.Apns.Keystore,
+      Settings.Notification.Apns.Password,
+      Settings.Notification.Apns.KeystoreType,
+      Settings.Notification.Apns.Host,
+      Integer.parseInt(Settings.Notification.Apns.Port))
   }
 
   @tailrec

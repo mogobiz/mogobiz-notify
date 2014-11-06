@@ -52,7 +52,7 @@ object MogoNotify {
   object Device {
     def isAndroid(regId: String) = !isIOS(regId)
 
-    def isIOS(regId: String) = regId.length == Settings.Apns.TokenSize
+    def isIOS(regId: String) = regId.length == Settings.Notification.Apns.TokenSize
   }
 
 }
