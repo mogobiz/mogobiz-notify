@@ -1,4 +1,4 @@
-package com.mogobiz.notify
+package com.mogobiz.notify.config
 
 import com.typesafe.config.ConfigFactory
 
@@ -22,7 +22,4 @@ object Settings {
     }
 
   }
-
-
 }
-

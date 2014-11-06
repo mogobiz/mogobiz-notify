@@ -4,7 +4,7 @@ import javapns.devices.implementations.basic.BasicDevice
 import javapns.notification._
 
 import com.mogobiz.json.JacksonConverter
-import com.mogobiz.notify.Settings
+import com.mogobiz.notify.config.Settings
 
 import scala.annotation.tailrec
 import akka.actor.ActorSystem

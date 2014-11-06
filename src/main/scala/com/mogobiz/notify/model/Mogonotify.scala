@@ -2,8 +2,7 @@ package com.mogobiz.notify.model
 
 import java.util.{Calendar, Date}
 
-
-import com.mogobiz.notify.Settings
+import com.mogobiz.notify.config.Settings
 import spray.httpx.unmarshalling.{MalformedContent, FromStringDeserializer}
 
 import scala.util.control.NonFatal
