@@ -5,6 +5,7 @@ import com.mogobiz.notify.config.Settings
 import com.mogobiz.notify.es.Mapping
 import com.sksamuel.elastic4s.ElasticDsl._
 import org.elasticsearch.indices.IndexAlreadyExistsException
+import org.elasticsearch.transport.RemoteTransportException
 
 object DBInitializer {
   def apply(): Unit = try {
@@ -12,7 +13,7 @@ object DBInitializer {
     Mapping.set()
     fillDB()
   } catch {
-    case e: IndexAlreadyExistsException =>
+    case e: RemoteTransportException if e.getCause().isInstanceOf[IndexAlreadyExistsException] =>
       println(s"Index ${Settings.Notification.EsIndex} was not created because it already exists.")
     case e: Throwable => e.printStackTrace()
   }
