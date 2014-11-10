@@ -3,7 +3,7 @@ package com.mogobiz.notify.config
 import com.typesafe.config.ConfigFactory
 
 object Settings {
-  private val config = ConfigFactory.load("notify")
+  private val config = ConfigFactory.load("notify").withFallback(ConfigFactory.load("default-notify"))
 
   object Notification {
     val EsIndex = config.getString("notification.esindex")
