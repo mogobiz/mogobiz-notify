@@ -12,7 +12,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 object Mapping {
-  def clear = Await.result(EsClient.client.execute(delete index Settings.Notification.EsIndex), Duration.Inf)
+  def clear = EsClient().execute(delete index Settings.Notification.EsIndex).await
 
   def mappingNames = List()
 
