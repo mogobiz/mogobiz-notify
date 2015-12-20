@@ -4,7 +4,6 @@
 
 package com.mogobiz.notify.es
 
-
 import com.mogobiz.es.EsClient
 import com.mogobiz.notify.config.Settings
 import com.sksamuel.elastic4s.ElasticDsl._
@@ -13,7 +12,7 @@ import spray.http._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 object Mapping {
   def clear = EsClient().execute(delete index Settings.Notification.EsIndex).await

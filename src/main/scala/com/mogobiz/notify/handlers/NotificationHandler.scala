@@ -13,12 +13,12 @@ import com.mogobiz.notify.config.Settings
 import scala.annotation.tailrec
 import akka.actor.ActorSystem
 import com.sksamuel.elastic4s.ElasticDsl._
-import com.mogobiz.notify.model.MogoNotify.{Device, Notification}
+import com.mogobiz.notify.model.MogoNotify.{ Device, Notification }
 import com.mogobiz.es.EsClient
 import spray.client.pipelining._
 import spray.http._
 
-import scala.concurrent.{Future}
+import scala.concurrent.{ Future }
 
 class NotificationHandler {
   def register(device: Device): Boolean = {
@@ -61,9 +61,9 @@ class NotificationHandler {
 
     val pipeline: SendReceive = (
       addHeader("Content-Type", "application/json")
-        ~> addCredentials(BasicHttpCredentials(s"key=${Settings.Notification.Gcm.ApiKey}"))
-        ~> sendReceive
-      )
+      ~> addCredentials(BasicHttpCredentials(s"key=${Settings.Notification.Gcm.ApiKey}"))
+      ~> sendReceive
+    )
 
     val MaxNotifs = 1000
     val toSendIds = if (regIds.length > MaxNotifs) regIds.take(MaxNotifs) else regIds
@@ -120,5 +120,4 @@ class NotificationHandler {
       res
   }
 }
-
 

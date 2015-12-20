@@ -14,7 +14,7 @@ import org.json4s.DefaultFormats
 import spray.http.HttpResponse
 import spray.routing.Directives
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext}
+import scala.concurrent.{ ExecutionContext }
 import akka.pattern.ask
 
 import spray.httpx.Json4sJacksonSupport
@@ -34,7 +34,6 @@ import Implicits._
  */
 class NotificationService(notificationActor: ActorRef)(implicit executionContext: ExecutionContext) extends Directives {
   implicit val timeout = Timeout(10.seconds)
-
 
   val route = get {
     pathPrefix("oauth") {
