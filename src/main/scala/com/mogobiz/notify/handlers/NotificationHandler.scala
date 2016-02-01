@@ -7,20 +7,25 @@ package com.mogobiz.notify.handlers
 import javapns.devices.implementations.basic.BasicDevice
 import javapns.notification._
 
+import akka.util.Timeout
+import com.mogobiz.es.EsClient
 import com.mogobiz.json.JacksonConverter
 import com.mogobiz.notify.config.Settings
-
-import scala.annotation.tailrec
-import akka.actor.ActorSystem
-import com.sksamuel.elastic4s.ElasticDsl._
 import com.mogobiz.notify.model.MogoNotify.{ Device, Notification }
-import com.mogobiz.es.EsClient
+import com.mogobiz.system.ActorSystemLocator
+import com.sksamuel.elastic4s.ElasticDsl._
 import spray.client.pipelining._
 import spray.http._
 
-import scala.concurrent.{ Future }
+import scala.annotation.tailrec
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class NotificationHandler {
+  implicit val timeout: Timeout = 40.seconds
+  implicit val system = ActorSystemLocator()
+  import system.dispatcher
+
   def register(device: Device): Boolean = {
     val req = search in Settings.Notification.EsIndex -> "Device" postFilter {
       and(
@@ -53,11 +58,8 @@ class NotificationHandler {
   @tailrec
   private def gcmNotify[T](regIds: List[String], data: T): Future[HttpResponse] = {
     case class GCMRequest(registration_ids: List[String], data: String)
-    implicit val system = ActorSystem()
-    import system.dispatcher
     // Place a special SSLContext in scope here to be used by HttpClient.
     // It trusts all server certificates.
-    import com.mogobiz.utils.SSLImplicits.trustfulSslContext
 
     val pipeline: SendReceive = (
       addHeader("Content-Type", "application/json")
@@ -91,11 +93,8 @@ class NotificationHandler {
 
     case class APNSRequest(aps: APNSContent)
 
-    implicit val system = ActorSystem()
-    import system.dispatcher
     // Place a special SSLContext in scope here to be used by HttpClient.
     // It trusts all server certificates.
-    import com.mogobiz.utils.SSLImplicits.trustfulSslContext
 
     val MaxNotifs = 1000
     val res =
