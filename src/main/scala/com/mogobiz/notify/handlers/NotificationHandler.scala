@@ -7,23 +7,25 @@ package com.mogobiz.notify.handlers
 import javapns.devices.implementations.basic.BasicDevice
 import javapns.notification._
 
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.headers.BasicHttpCredentials
+import akka.http.scaladsl.model.{HttpEntity, MediaTypes, _}
 import akka.util.Timeout
 import com.mogobiz.es.EsClient
-import com.mogobiz.json.JacksonConverter
 import com.mogobiz.notify.config.Settings
-import com.mogobiz.notify.model.MogoNotify.{ Device, Notification }
+import com.mogobiz.notify.model.MogoNotify.{Device, Notification}
 import com.mogobiz.system.ActorSystemLocator
 import com.sksamuel.elastic4s.ElasticDsl._
-import spray.client.pipelining._
-import spray.http._
 
 import scala.annotation.tailrec
-import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 class NotificationHandler {
   implicit val timeout: Timeout = 40.seconds
   implicit val system = ActorSystemLocator()
+
+  import com.mogobiz.json.Implicits._
   import system.dispatcher
 
   def register(device: Device): Boolean = {
@@ -34,7 +36,7 @@ class NotificationHandler {
       )
     }
     // We delete the existing device if any && upsert
-    EsClient.update(Settings.Notification.EsIndex, device, true, false)
+    EsClient.update[Device](Settings.Notification.EsIndex, device, true, false)
   }
 
   def unregister(storeCode: String, regId: String): Boolean = {
@@ -61,20 +63,24 @@ class NotificationHandler {
     // Place a special SSLContext in scope here to be used by HttpClient.
     // It trusts all server certificates.
 
-    val pipeline: SendReceive = (
-      addHeader("Content-Type", "application/json")
-      ~> addCredentials(BasicHttpCredentials(s"key=${Settings.Notification.Gcm.ApiKey}"))
-      ~> sendReceive
-    )
-
     val MaxNotifs = 1000
     val toSendIds = if (regIds.length > MaxNotifs) regIds.take(MaxNotifs) else regIds
-    val payload = JacksonConverter.mapper.writeValueAsString(GCMRequest(toSendIds, data.toString))
-    val res = pipeline(Post("https://android.googleapis.com/gcm/send", payload))
+    val payload = serialization.write(GCMRequest(toSendIds, data.toString))
+    val request = HttpRequest(
+      method = HttpMethods.POST,
+      uri = Uri("https://android.googleapis.com/gcm/send"),
+      entity = HttpEntity(MediaTypes.`application/json`, payload),
+      headers = List(headers.Authorization(BasicHttpCredentials(s"key=${Settings.Notification.Gcm.ApiKey}")))
+    )
+
+    val singleResult = Http().singleRequest(request)
+    Await.result(singleResult, 10 seconds)
+
+
     if (regIds.length > MaxNotifs)
       gcmNotify(regIds.drop(MaxNotifs), data)
     else
-      res
+      singleResult
   }
 
   lazy val appleNotificationServer: AppleNotificationServer = {
@@ -99,7 +105,7 @@ class NotificationHandler {
     val MaxNotifs = 1000
     val res =
       Future {
-        val jsonData = JacksonConverter.mapper.writeValueAsString(APNSRequest(APNSContent(1, data.toString)))
+        val jsonData = serialization.write(APNSRequest(APNSContent(1, data.toString)))
         val payload = new PushNotificationPayload(jsonData)
         val pushManager = new PushNotificationManager()
         pushManager.initializeConnection(appleNotificationServer)

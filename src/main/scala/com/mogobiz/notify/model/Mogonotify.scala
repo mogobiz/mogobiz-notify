@@ -4,12 +4,14 @@
 
 package com.mogobiz.notify.model
 
-import java.util.{ Calendar, Date }
+import java.util.{Calendar, Date}
 
+import akka.http.scaladsl.unmarshalling.{FromStringUnmarshaller, Unmarshaller}
+import com.fasterxml.jackson.core.`type`.TypeReference
+import com.fasterxml.jackson.module.scala.JsonScalaEnumeration
 import com.mogobiz.notify.config.Settings
-import spray.httpx.unmarshalling.{ MalformedContent, FromStringDeserializer }
 
-import scala.util.control.NonFatal
+import scala.concurrent.Future
 
 object MogoNotify {
   type Document = String
@@ -22,34 +24,30 @@ object MogoNotify {
 
   import Platform._
 
-  implicit def PlatformUnmarshaller = new FromStringDeserializer[Platform] {
-    def apply(value: String) =
-      try
-        Right(Platform.withName(value))
-      catch {
-        case NonFatal(ex) => Left(MalformedContent(s"Cannot parse: $value", ex))
-      }
-  }
+
+  implicit def PlatformUnmarshaller : FromStringUnmarshaller[Platform] = Unmarshaller(ex ⇒ value ⇒ Future.successful(Platform.withName(value)))
+
+  class PlatformRef extends TypeReference[Platform.type]
 
   import com.mogobiz.notify.model.MogoNotify.Platform._
 
   case class Device(uuid: String,
-    deviceUuid: String,
-    storeCode: String,
-    regId: String,
-    platform: Platform,
-    lang: String,
-    clientId: Option[String] = None,
-    var dateCreated: Date = Calendar.getInstance().getTime,
-    var lastUpdated: Date = Calendar.getInstance().getTime)
+                    deviceUuid: String,
+                    storeCode: String,
+                    regId: String,
+                    @JsonScalaEnumeration(classOf[PlatformRef]) platform: Platform,
+                    lang: String,
+                    clientId: Option[String] = None,
+                    var dateCreated: Date = Calendar.getInstance().getTime,
+                    var lastUpdated: Date = Calendar.getInstance().getTime)
 
   case class Notification[T](uuid: String,
-    store: String,
-    regIds: List[String],
-    lang: String,
-    payload: T,
-    var dateCreated: Date = Calendar.getInstance().getTime,
-    var lastUpdated: Date = Calendar.getInstance().getTime)
+                             store: String,
+                             regIds: List[String],
+                             lang: String,
+                             payload: T,
+                             var dateCreated: Date = Calendar.getInstance().getTime,
+                             var lastUpdated: Date = Calendar.getInstance().getTime)
 
   object Device {
     def isAndroid(regId: String) = !isIOS(regId)

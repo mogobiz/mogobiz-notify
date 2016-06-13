@@ -5,25 +5,16 @@
 package com.mogobiz.notify.services
 
 import akka.actor.ActorRef
+import akka.http.scaladsl.model.HttpResponse
+import akka.http.scaladsl.server.Directives
+import akka.pattern.ask
 import akka.util.Timeout
+import com.mogobiz.json.Implicits._
 import com.mogobiz.notify.actors.NotificationActor._
-
 import com.mogobiz.notify.model.MogoNotify.Platform._
 
-import org.json4s.DefaultFormats
-import spray.http.HttpResponse
-import spray.routing.Directives
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext }
-import akka.pattern.ask
-
-import spray.httpx.Json4sJacksonSupport
-
-object Implicits extends Json4sJacksonSupport {
-  implicit val json4sJacksonFormats = DefaultFormats
-}
-
-import Implicits._
 /*
   case class Register(store: String, regId: String, clientId: String, platform: Platform, lang: String)
 
@@ -49,6 +40,7 @@ class NotificationService(notificationActor: ActorRef)(implicit executionContext
     get {
       parameters('store, 'deviceUuid, 'regId, 'clientId.?, 'platform.as[Platform], 'lang).as(Register) { register =>
         complete {
+          import de.heikoseeberger.akkahttpjson4s.Json4sSupport._
           (notificationActor ? register).mapTo[Boolean]
         }
       }
@@ -59,6 +51,7 @@ class NotificationService(notificationActor: ActorRef)(implicit executionContext
     get {
       parameters('store, 'regId).as(Unregister) { unregister =>
         complete {
+          import de.heikoseeberger.akkahttpjson4s.Json4sSupport._
           (notificationActor ? unregister).mapTo[Boolean]
         }
       }
