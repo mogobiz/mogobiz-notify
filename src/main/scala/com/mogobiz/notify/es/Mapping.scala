@@ -5,15 +5,17 @@
 package com.mogobiz.notify.es
 
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{HttpResponse, StatusCodes, _}
+import akka.http.scaladsl.model.{ HttpResponse, StatusCodes, _ }
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.stream.ActorMaterializer
 import com.mogobiz.es.EsClient
 import com.mogobiz.notify.config.Settings
+import com.mogobiz.system.{ ActorSystemLocator, MaterializerLocator }
 import com.sksamuel.elastic4s.ElasticDsl._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 object Mapping {
   def clear = EsClient().execute(delete index Settings.Notification.EsIndex).await
@@ -25,7 +27,7 @@ object Mapping {
     def mappingFor(name: String) = getClass().getResourceAsStream(s"es/notify/mappings/$name.json")
 
     implicit val system = akka.actor.ActorSystem("mogopay-boot")
-
+    implicit val materializer = ActorMaterializer()
 
     mappingNames foreach { name =>
       val url = s"/${Settings.Notification.EsIndex}/$name/_mapping"

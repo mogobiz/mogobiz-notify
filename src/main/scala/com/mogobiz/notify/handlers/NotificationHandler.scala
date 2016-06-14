@@ -9,21 +9,22 @@ import javapns.notification._
 
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.headers.BasicHttpCredentials
-import akka.http.scaladsl.model.{HttpEntity, MediaTypes, _}
+import akka.http.scaladsl.model.{ HttpEntity, MediaTypes, _ }
 import akka.util.Timeout
 import com.mogobiz.es.EsClient
 import com.mogobiz.notify.config.Settings
-import com.mogobiz.notify.model.MogoNotify.{Device, Notification}
-import com.mogobiz.system.ActorSystemLocator
+import com.mogobiz.notify.model.MogoNotify.{ Device, Notification }
+import com.mogobiz.system.{ ActorSystemLocator, MaterializerLocator }
 import com.sksamuel.elastic4s.ElasticDsl._
 
 import scala.annotation.tailrec
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 class NotificationHandler {
   implicit val timeout: Timeout = 40.seconds
   implicit val system = ActorSystemLocator()
+  implicit val materializer = MaterializerLocator()
 
   import com.mogobiz.json.Implicits._
   import system.dispatcher
@@ -75,7 +76,6 @@ class NotificationHandler {
 
     val singleResult = Http().singleRequest(request)
     Await.result(singleResult, 10 seconds)
-
 
     if (regIds.length > MaxNotifs)
       gcmNotify(regIds.drop(MaxNotifs), data)
