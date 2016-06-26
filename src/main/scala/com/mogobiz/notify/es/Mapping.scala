@@ -15,13 +15,14 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 object Mapping {
-  def clear = EsClient().execute(delete index Settings.Notification.EsIndex).await
+  import EsClient.secureRequest
+  def clear = EsClient().execute(secureRequest(delete index Settings.Notification.EsIndex)).await
 
   def mappingNames = List()
 
   def set() {
     def route(url: String) = "http://" + com.mogobiz.es.Settings.ElasticSearch.FullUrl + url
-    def mappingFor(name: String) = getClass().getResourceAsStream(s"es/notify/mappings/$name.json")
+    def mappingFor(name: String) = getClass.getResourceAsStream(s"es/notify/mappings/$name.json")
 
     implicit val system = akka.actor.ActorSystem("mogopay-boot")
     val pipeline: HttpRequest => scala.concurrent.Future[HttpResponse] = sendReceive
