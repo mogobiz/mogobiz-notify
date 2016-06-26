@@ -7,7 +7,7 @@ package com.mogobiz.notify.config
 import com.mogobiz.notify.handlers.NotificationHandler
 
 /**
- */
+  */
 object MogonotifyHandlers {
   val notificationHandler = new NotificationHandler
 }

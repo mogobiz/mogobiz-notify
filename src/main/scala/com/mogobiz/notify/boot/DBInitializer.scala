@@ -12,17 +12,17 @@ import org.elasticsearch.indices.IndexAlreadyExistsException
 import org.elasticsearch.transport.RemoteTransportException
 
 object DBInitializer {
-  def apply(): Unit = try {
-    import EsClient.secureRequest
-    EsClient().execute(secureRequest(create index Settings.Notification.EsIndex)).await
-    Mapping.set()
-    fillDB()
-  } catch {
-    case e: RemoteTransportException if e.getCause.isInstanceOf[IndexAlreadyExistsException] =>
-      println(s"Index ${Settings.Notification.EsIndex} was not created because it already exists.")
-    case e: Throwable => e.printStackTrace()
-  }
+  def apply(): Unit =
+    try {
+      import EsClient.secureRequest
+      EsClient().execute(secureRequest(create index Settings.Notification.EsIndex)).await
+      Mapping.set()
+      fillDB()
+    } catch {
+      case e: RemoteTransportException if e.getCause().isInstanceOf[IndexAlreadyExistsException] =>
+        println(s"Index ${Settings.Notification.EsIndex} was not created because it already exists.")
+      case e: Throwable => e.printStackTrace()
+    }
 
-  private def fillDB() {
-  }
+  private def fillDB() {}
 }

@@ -11,7 +11,7 @@ import akka.util.Timeout
 import com.mogobiz.es.EsClient
 import com.mogobiz.json.JacksonConverter
 import com.mogobiz.notify.config.Settings
-import com.mogobiz.notify.model.MogoNotify.{ Device, Notification }
+import com.mogobiz.notify.model.MogoNotify.{Device, Notification}
 import com.mogobiz.system.ActorSystemLocator
 import com.sksamuel.elastic4s.ElasticDsl._
 import spray.client.pipelining._
@@ -23,14 +23,14 @@ import scala.concurrent.duration._
 
 class NotificationHandler {
   implicit val timeout: Timeout = 40.seconds
-  implicit val system = ActorSystemLocator()
+  implicit val system           = ActorSystemLocator()
   import system.dispatcher
 
   def register(device: Device): Boolean = {
     val req = search in Settings.Notification.EsIndex -> "Device" postFilter {
       and(
-        termFilter("deviceUuid", device.deviceUuid),
-        termFilter("storeCode", device.storeCode)
+          termFilter("deviceUuid", device.deviceUuid),
+          termFilter("storeCode", device.storeCode)
       )
     }
     // We delete the existing device if any && upsert
@@ -40,8 +40,8 @@ class NotificationHandler {
   def unregister(storeCode: String, regId: String): Boolean = {
     val req = search in Settings.Notification.EsIndex types "Device" postFilter {
       and(
-        termFilter("regId", regId),
-        termFilter("storeCode", storeCode)
+          termFilter("regId", regId),
+          termFilter("storeCode", storeCode)
       )
     }
     val devices = EsClient.search[Device](req)
@@ -62,15 +62,15 @@ class NotificationHandler {
     // It trusts all server certificates.
 
     val pipeline: SendReceive = (
-      addHeader("Content-Type", "application/json")
-      ~> addCredentials(BasicHttpCredentials(s"key=${Settings.Notification.Gcm.ApiKey}"))
-      ~> sendReceive
-    )
+          addHeader("Content-Type", "application/json")
+            ~> addCredentials(BasicHttpCredentials(s"key=${Settings.Notification.Gcm.ApiKey}"))
+            ~> sendReceive
+      )
 
     val MaxNotifs = 1000
     val toSendIds = if (regIds.length > MaxNotifs) regIds.take(MaxNotifs) else regIds
-    val payload = JacksonConverter.mapper.writeValueAsString(GCMRequest(toSendIds, data.toString))
-    val res = pipeline(Post("https://android.googleapis.com/gcm/send", payload))
+    val payload   = JacksonConverter.mapper.writeValueAsString(GCMRequest(toSendIds, data.toString))
+    val res       = pipeline(Post("https://android.googleapis.com/gcm/send", payload))
     if (regIds.length > MaxNotifs)
       gcmNotify(regIds.drop(MaxNotifs), data)
     else
@@ -78,12 +78,11 @@ class NotificationHandler {
   }
 
   lazy val appleNotificationServer: AppleNotificationServer = {
-    new AppleNotificationServerBasicImpl(
-      Settings.Notification.Apns.Keystore,
-      Settings.Notification.Apns.Password,
-      Settings.Notification.Apns.KeystoreType,
-      Settings.Notification.Apns.Host,
-      Integer.parseInt(Settings.Notification.Apns.Port))
+    new AppleNotificationServerBasicImpl(Settings.Notification.Apns.Keystore,
+                                         Settings.Notification.Apns.Password,
+                                         Settings.Notification.Apns.KeystoreType,
+                                         Settings.Notification.Apns.Host,
+                                         Integer.parseInt(Settings.Notification.Apns.Port))
   }
 
   @tailrec
@@ -97,26 +96,24 @@ class NotificationHandler {
     // It trusts all server certificates.
 
     val MaxNotifs = 1000
-    val res =
-      Future {
-        val jsonData = JacksonConverter.mapper.writeValueAsString(APNSRequest(APNSContent(1, data.toString)))
-        val payload = new PushNotificationPayload(jsonData)
-        val pushManager = new PushNotificationManager()
-        pushManager.initializeConnection(appleNotificationServer)
+    val res = Future {
+      val jsonData    = JacksonConverter.mapper.writeValueAsString(APNSRequest(APNSContent(1, data.toString)))
+      val payload     = new PushNotificationPayload(jsonData)
+      val pushManager = new PushNotificationManager()
+      pushManager.initializeConnection(appleNotificationServer)
 
-        val toSendIds = if (regIds.length > MaxNotifs) regIds.take(MaxNotifs) else regIds
-        val devices = toSendIds.map(new BasicDevice(_))
-        val notifications = pushManager.sendNotifications(payload, devices: _*)
-        val successCount = PushedNotification.findSuccessfulNotifications(notifications).size()
-        if (successCount == 0)
-          HttpResponse(StatusCodes.InternalServerError)
-        else
-          HttpResponse(StatusCodes.OK)
-      }
+      val toSendIds     = if (regIds.length > MaxNotifs) regIds.take(MaxNotifs) else regIds
+      val devices       = toSendIds.map(new BasicDevice(_))
+      val notifications = pushManager.sendNotifications(payload, devices: _*)
+      val successCount  = PushedNotification.findSuccessfulNotifications(notifications).size()
+      if (successCount == 0)
+        HttpResponse(StatusCodes.InternalServerError)
+      else
+        HttpResponse(StatusCodes.OK)
+    }
     if (regIds.length > MaxNotifs)
       apnsNotify(regIds.drop(MaxNotifs), data)
     else
       res
   }
 }
-
