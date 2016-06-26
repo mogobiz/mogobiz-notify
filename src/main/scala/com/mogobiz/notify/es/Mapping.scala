@@ -15,7 +15,8 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 object Mapping {
-  def clear = EsClient().execute(delete index Settings.Notification.EsIndex).await
+  import EsClient.secureRequest
+  def clear = EsClient().execute(secureRequest(delete index Settings.Notification.EsIndex)).await
 
   def mappingNames = List()
 
