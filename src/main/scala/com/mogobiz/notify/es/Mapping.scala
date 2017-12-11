@@ -4,9 +4,10 @@
 
 package com.mogobiz.notify.es
 
+import akka.actor.ActorSystem
 import com.mogobiz.es.EsClient
 import com.mogobiz.notify.config.Settings
-import com.sksamuel.elastic4s.ElasticDsl._
+import com.sksamuel.elastic4s.http.ElasticDsl._
 import spray.client.pipelining._
 import spray.http._
 
@@ -15,8 +16,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 object Mapping {
-  import EsClient.secureRequest
-  def clear = EsClient().execute(secureRequest(delete index Settings.Notification.EsIndex)).await
+  def clear = EsClient().execute(deleteIndex(Settings.Notification.EsIndex)).await
 
   def mappingNames = List()
 
@@ -24,7 +24,7 @@ object Mapping {
     def route(url: String)       = "http://" + com.mogobiz.es.Settings.ElasticSearch.FullUrl + url
     def mappingFor(name: String) = getClass().getResourceAsStream(s"es/notify/mappings/$name.json")
 
-    implicit val system                                                = akka.actor.ActorSystem("mogopay-boot")
+    implicit val system: ActorSystem                                   = akka.actor.ActorSystem("mogopay-boot")
     val pipeline: HttpRequest => scala.concurrent.Future[HttpResponse] = sendReceive
 
     mappingNames foreach { name =>

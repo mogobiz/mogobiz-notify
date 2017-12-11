@@ -13,10 +13,9 @@ import com.mogobiz.json.JacksonConverter
 import com.mogobiz.notify.config.Settings
 import com.mogobiz.notify.model.MogoNotify.{Device, Notification}
 import com.mogobiz.system.ActorSystemLocator
-import com.sksamuel.elastic4s.ElasticDsl._
+import com.sksamuel.elastic4s.http.ElasticDsl._
+import spray.http.{BasicHttpCredentials, HttpResponse, StatusCodes}
 import spray.client.pipelining._
-import spray.http._
-
 import scala.annotation.tailrec
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -27,22 +26,16 @@ class NotificationHandler {
   import system.dispatcher
 
   def register(device: Device): Boolean = {
-    val req = search in Settings.Notification.EsIndex -> "Device" postFilter {
-      and(
-          termFilter("deviceUuid", device.deviceUuid),
-          termFilter("storeCode", device.storeCode)
-      )
+    val req = search(Settings.Notification.EsIndex -> "Device") query {
+      boolQuery().must(termQuery("deviceUuid", device.deviceUuid), termQuery("storeCode", device.storeCode))
     }
     // We delete the existing device if any && upsert
     EsClient.update(Settings.Notification.EsIndex, device, true, false)
   }
 
   def unregister(storeCode: String, regId: String): Boolean = {
-    val req = search in Settings.Notification.EsIndex types "Device" postFilter {
-      and(
-          termFilter("regId", regId),
-          termFilter("storeCode", storeCode)
-      )
+    val req = search(Settings.Notification.EsIndex -> "Device") query {
+      boolQuery().must(termQuery("regId", regId), termQuery("storeCode", storeCode))
     }
     val devices = EsClient.search[Device](req)
     devices.foreach(d => EsClient.delete[Device](Settings.Notification.EsIndex, d.uuid, false))
@@ -57,7 +50,9 @@ class NotificationHandler {
 
   @tailrec
   private def gcmNotify[T](regIds: List[String], data: T): Future[HttpResponse] = {
+
     case class GCMRequest(registration_ids: List[String], data: String)
+
     // Place a special SSLContext in scope here to be used by HttpClient.
     // It trusts all server certificates.
 
@@ -69,7 +64,7 @@ class NotificationHandler {
 
     val MaxNotifs = 1000
     val toSendIds = if (regIds.length > MaxNotifs) regIds.take(MaxNotifs) else regIds
-    val payload   = JacksonConverter.mapper.writeValueAsString(GCMRequest(toSendIds, data.toString))
+    val payload   = JacksonConverter.serialize(GCMRequest(toSendIds, data.toString))
     val res       = pipeline(Post("https://android.googleapis.com/gcm/send", payload))
     if (regIds.length > MaxNotifs)
       gcmNotify(regIds.drop(MaxNotifs), data)
@@ -87,7 +82,9 @@ class NotificationHandler {
 
   @tailrec
   private def apnsNotify[T](regIds: List[String], data: T): Future[HttpResponse] = {
+
     case class APNSContent(badge: Integer, alert: String)
+
     // content-available :Integer
 
     case class APNSRequest(aps: APNSContent)
@@ -97,7 +94,7 @@ class NotificationHandler {
 
     val MaxNotifs = 1000
     val res = Future {
-      val jsonData    = JacksonConverter.mapper.writeValueAsString(APNSRequest(APNSContent(1, data.toString)))
+      val jsonData    = JacksonConverter.serialize(APNSRequest(APNSContent(1, data.toString)))
       val payload     = new PushNotificationPayload(jsonData)
       val pushManager = new PushNotificationManager()
       pushManager.initializeConnection(appleNotificationServer)
