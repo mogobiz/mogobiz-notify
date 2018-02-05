@@ -16,6 +16,7 @@ import com.mogobiz.utils.HttpRequestor
 import com.sksamuel.elastic4s.http.ElasticDsl._
 import com.sksamuel.elastic4s.http.index.admin.DeleteIndexResponse
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
